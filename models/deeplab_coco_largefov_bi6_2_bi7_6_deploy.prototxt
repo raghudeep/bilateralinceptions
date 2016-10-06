@@ -269,7 +269,7 @@ layer {
   bottom: "fc6_dist_kernel_pool"
   bottom: "scale_fc6_flat"
   top: "fc6_scale_kernel_pool"
-  scalar_param {
+  scale_param {
     axis: 1
   }
 }
@@ -335,7 +335,7 @@ layer {
   bottom: "fc7_dist_kernel_pool"
   bottom: "scale_fc7_flat"
   top: "fc7_scale_kernel_pool"
-  scalar_param {
+  scale_param {
     axis: 1
   }
 }

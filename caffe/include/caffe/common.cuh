@@ -1,15 +1,13 @@
-// Copyright 2016 Max Planck Society
-// Distributed under the BSD-3 Software license,
-// (See accompanying file ../../../../LICENSE.txt or copy at
-// https://opensource.org/licenses/BSD-3-Clause)
+// Copyright 2014 George Papandreou
 
 #ifndef CAFFE_COMMON_CUH_
 #define CAFFE_COMMON_CUH_
 
 #include <cuda.h>
 
-// atomicAdd is not defined for doubles
-// from http://docs.nvidia.com/cuda/cuda-c-programming-guide/#atomic-functions
+// CUDA: atomicAdd is not defined for doubles before compute capability 6.0
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ >= 600
+#else
 static __inline__ __device__ double atomicAdd(double *address, double val) {
   unsigned long long int* address_as_ull = (unsigned long long int*)address;
   unsigned long long int old = *address_as_ull, assumed;
@@ -22,5 +20,6 @@ static __inline__ __device__ double atomicAdd(double *address, double val) {
   } while (assumed != old);
   return __longlong_as_double(old);
 }
+#endif
 
 #endif

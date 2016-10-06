@@ -131,4 +131,7 @@ add_custom_target(
   DEPENDS CaffeUpstream
 )
 
+message(STATUS "gSLICr included for compilation")
+add_subdirectory("external/gSLICr")
+add_subdirectory("tools/")
 #add_subdirectory(${CAFFE_DIRECTORY} caffe_tmp)

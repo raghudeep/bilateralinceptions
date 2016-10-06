@@ -1,0 +1,3 @@
+[submodule "external/gSLICr"]
+	path = external/gSLICr
+	url = https://github.com/carlren/gSLICr.git

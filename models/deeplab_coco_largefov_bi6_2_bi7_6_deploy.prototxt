@@ -1,0 +1,929 @@
+name: "VOC12"
+input: "img"
+input: "spixel_index"
+input_shape {
+  dim: 1
+  dim: 3
+  dim: 513
+  dim: 513
+}
+input_shape {
+  dim: 1
+  dim: 1
+  dim: 513
+  dim: 513
+}
+# force_backward: true
+
+layer {
+  name: "dummy1"
+  type: "DummyData"
+  dummy_data_param {
+    num: 1
+    channels: 1
+    height: 1
+    width: 1000
+    data_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+  top: "data1"
+}
+
+# Extracting Superpixel features
+layer {
+  type: "SpixelFeature"
+  name: "spixel_feature"
+  bottom: "img"
+  bottom: "spixel_index"
+  top: "flatten_xyrgbxy_features"
+  #top: "xyrgbxy_features"
+  spixel_feature_param {
+    type: AVGXYRGBXY
+    max_spixels: 1000
+    ignore_feature_value: 255
+    ignore_idx_value: 100000
+    rgbxy_rgb_scale: 0.1
+    rgbxy_xy_scale: 0.01
+    xy_scale: 0.1
+  }
+}
+# Transform the features
+layer {
+  bottom: "flatten_xyrgbxy_features"
+  top: "flatten_xyrgbxy_features2"
+  name: "transform_features"
+  type: "Convolution"
+  convolution_param {
+    num_output: 7
+    kernel_size: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+}
+
+# Smear the features to image size
+layer {
+  type: "Smear"
+  name: "feature_smear"
+  top: "xyrgbxy_features"
+  bottom: "flatten_xyrgbxy_features2"
+  bottom: "spixel_index"
+  smear_param{
+    ignore_feature_value: 255
+    ignore_idx_value: 100000
+  }
+}
+
+
+layer {
+  name: "slice_features"
+  type: "Slice"
+  bottom: "flatten_xyrgbxy_features2"
+  top: "flatten_xy_features"
+  top: "flatten_rgbxy_features"
+  slice_param {
+    axis: 1
+    slice_point: 2
+  }
+}
+
+layer {
+  name: "slice_features2"
+  type: "Slice"
+  bottom: "xyrgbxy_features"
+  top: "xy_features"
+  top: "rgbxy_features"
+  slice_param {
+    axis: 1
+    slice_point: 2
+  }
+}
+
+layer {
+  name: "_layer_0"
+  type: "Interp"
+  bottom: "rgbxy_features"
+  top: "pooled_rgbxy_features"
+  interp_param {
+    shrink_factor: 8
+  }
+}
+layer {
+  name: "_layer_1"
+  type: "Interp"
+  bottom: "xy_features"
+  top: "pooled_xy_features"
+  interp_param {
+    shrink_factor: 8
+  }
+}
+
+# RGBXY kernel from pixels -> spixels
+layer {
+  type: "Pdist"
+  name: "pixel_rgbxy_dist"
+  top: "pixel_rgbxy_distkernel"
+  bottom: "pooled_rgbxy_features"
+  bottom: "flatten_rgbxy_features"
+  pdist_param {
+    ignore_value: 255
+    scale_value: -1.0
+  }
+}
+# XY kernel from pixels -> spixels
+layer {
+  type: "Pdist"
+  name: "pixel_xy_dist"
+  top: "pixel_xy_distkernel"
+  bottom: "pooled_xy_features"
+  bottom: "flatten_xy_features"
+  pdist_param {
+    ignore_value: 255
+    scale_value: -1.0
+  }
+}
+
+# RGBXY kernel from spixels -> spixels
+layer {
+  type: "Pdist"
+  name: "spixel_rgbxy_dist"
+  top: "spixel_rgbxy_distkernel"
+  bottom: "flatten_rgbxy_features"
+  bottom: "flatten_rgbxy_features"
+  pdist_param {
+    ignore_value: 255
+    scale_value: -1.0
+  }
+}
+# XY kernel from spixels -> spixels
+layer {
+  type: "Pdist"
+  name: "spixel_xy_dist"
+  top: "spixel_xy_distkernel"
+  bottom: "flatten_xy_features"
+  bottom: "flatten_xy_features"
+  pdist_param {
+    ignore_value: 255
+    scale_value: -1.0
+  }
+}
+
+# Kernel pool for FC-6 layer
+layer {
+  name: "concat"
+  bottom: "pixel_rgbxy_distkernel"
+  bottom: "pixel_xy_distkernel"
+  top: "fc6_dist_kernel_pool"
+  type: "Concat"
+  concat_param {
+    axis: 1
+  }
+}
+
+# Kernel pool for FC-7 layer
+layer {
+  name: "concat"
+  bottom: "spixel_rgbxy_distkernel"
+  bottom: "spixel_xy_distkernel"
+  bottom: "spixel_rgbxy_distkernel"
+  bottom: "spixel_xy_distkernel"
+  bottom: "spixel_rgbxy_distkernel"
+  bottom: "spixel_xy_distkernel"
+  top: "fc7_dist_kernel_pool"
+  type: "Concat"
+  concat_param {
+    axis: 1
+  }
+}
+
+# Scale, exp, normalize and application of FC6 kernels
+
+# Scale the FC6 kernel pool
+layer {
+  name: "dummy"
+  type: "DummyData"
+  dummy_data_param {
+    num: 1
+    channels: 1
+    height: 1
+    width: 1
+    data_filler {
+      type: "constant"
+      value: 1
+    }
+  }
+  top: "data2"
+}
+layer {
+  name: "scale_fc6"
+  type: "Convolution"
+  bottom: "data2"
+  top: "scale_fc6"
+  param {
+    lr_mult: 1
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 2
+    kernel_size: 1
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  bottom: "scale_fc6"
+  top: "scale_fc6"
+  name: "relu_scale_fc6"
+  type: "ReLU"
+}
+layer {
+  name: "flattendata"
+  type: "Flatten"
+  bottom: "scale_fc6"
+  top: "scale_fc6_flat"
+  flatten_param {
+    axis: 0
+  }
+}
+layer {
+  name: "scale_fc6_kernels"
+  type: "Scale"
+  bottom: "fc6_dist_kernel_pool"
+  bottom: "scale_fc6_flat"
+  top: "fc6_scale_kernel_pool"
+  scalar_param {
+    axis: 1
+  }
+}
+
+# Exponentiate and normalize the FC6 kernel pool
+layer {
+  type: "Softmax"
+  name: "exp_fc6_kernels"
+  bottom: "fc6_scale_kernel_pool"
+  top: "fc6_exp_kernel_pool"
+  softmax_param {
+    axis: 3
+  }
+}
+
+# Scale, exp, normalize and application of FC7 kernels
+
+# Scale the FC7 kernel pool
+layer {
+  name: "scale_fc7"
+  type: "Convolution"
+  bottom: "data2"
+  top: "scale_fc7"
+  param {
+    lr_mult: 10
+    decay_mult: 0
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 6
+    kernel_size: 1
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  bottom: "scale_fc7"
+  top: "scale_fc7"
+  name: "relu_scale_fc7"
+  type: "ReLU"
+}
+layer {
+  name: "flattendata"
+  type: "Flatten"
+  bottom: "scale_fc7"
+  top: "scale_fc7_flat"
+  flatten_param {
+    axis: 0
+  }
+}
+layer {
+  name: "scale_fc7_kernels"
+  type: "Scale"
+  bottom: "fc7_dist_kernel_pool"
+  bottom: "scale_fc7_flat"
+  top: "fc7_scale_kernel_pool"
+  scalar_param {
+    axis: 1
+  }
+}
+
+# Exponentiate and normalize the FC7 kernel pool
+layer {
+  type: "Softmax"
+  name: "exp_fc7_kernels"
+  bottom: "fc7_scale_kernel_pool"
+  top: "fc7_exp_kernel_pool"
+  softmax_param {
+    axis: 3
+  }
+}
+
+layer {
+  name: "conv1_1"
+  type: "Convolution"
+  bottom: "img"
+  top: "conv1_1"
+  convolution_param {
+    num_output: 64
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu1_1"
+  type: "ReLU"
+  bottom: "conv1_1"
+  top: "conv1_1"
+}
+layer {
+  name: "conv1_2"
+  type: "Convolution"
+  bottom: "conv1_1"
+  top: "conv1_2"
+  convolution_param {
+    num_output: 64
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu1_2"
+  type: "ReLU"
+  bottom: "conv1_2"
+  top: "conv1_2"
+}
+layer {
+  name: "pool1"
+  type: "Pooling"
+  bottom: "conv1_2"
+  top: "pool1"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+    pad: 1
+  }
+}
+layer {
+  name: "conv2_1"
+  type: "Convolution"
+  bottom: "pool1"
+  top: "conv2_1"
+  convolution_param {
+    num_output: 128
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu2_1"
+  type: "ReLU"
+  bottom: "conv2_1"
+  top: "conv2_1"
+}
+layer {
+  name: "conv2_2"
+  type: "Convolution"
+  bottom: "conv2_1"
+  top: "conv2_2"
+  convolution_param {
+    num_output: 128
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu2_2"
+  type: "ReLU"
+  bottom: "conv2_2"
+  top: "conv2_2"
+}
+layer {
+  name: "pool2"
+  type: "Pooling"
+  bottom: "conv2_2"
+  top: "pool2"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+    pad: 1
+  }
+}
+layer {
+  name: "conv3_1"
+  type: "Convolution"
+  bottom: "pool2"
+  top: "conv3_1"
+  convolution_param {
+    num_output: 256
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu3_1"
+  type: "ReLU"
+  bottom: "conv3_1"
+  top: "conv3_1"
+}
+layer {
+  name: "conv3_2"
+  type: "Convolution"
+  bottom: "conv3_1"
+  top: "conv3_2"
+  convolution_param {
+    num_output: 256
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu3_2"
+  type: "ReLU"
+  bottom: "conv3_2"
+  top: "conv3_2"
+}
+layer {
+  name: "conv3_3"
+  type: "Convolution"
+  bottom: "conv3_2"
+  top: "conv3_3"
+  convolution_param {
+    num_output: 256
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu3_3"
+  type: "ReLU"
+  bottom: "conv3_3"
+  top: "conv3_3"
+}
+layer {
+  name: "pool3"
+  type: "Pooling"
+  bottom: "conv3_3"
+  top: "pool3"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 2
+    pad: 1
+  }
+}
+layer {
+  name: "conv4_1"
+  type: "Convolution"
+  bottom: "pool3"
+  top: "conv4_1"
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu4_1"
+  type: "ReLU"
+  bottom: "conv4_1"
+  top: "conv4_1"
+}
+layer {
+  name: "conv4_2"
+  type: "Convolution"
+  bottom: "conv4_1"
+  top: "conv4_2"
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu4_2"
+  type: "ReLU"
+  bottom: "conv4_2"
+  top: "conv4_2"
+}
+layer {
+  name: "conv4_3"
+  type: "Convolution"
+  bottom: "conv4_2"
+  top: "conv4_3"
+  convolution_param {
+    num_output: 512
+    pad: 1
+    kernel_size: 3
+    #engine: CAFFE
+  }
+}
+layer {
+  name: "relu4_3"
+  type: "ReLU"
+  bottom: "conv4_3"
+  top: "conv4_3"
+}
+layer {
+  name: "pool4"
+  type: "Pooling"
+  bottom: "conv4_3"
+  top: "pool4"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 1
+    pad: 1
+  }
+}
+layer {
+  name: "conv5_1"
+  type: "Convolution"
+  bottom: "pool4"
+  top: "conv5_1"
+  convolution_param {
+    num_output: 512
+    pad: 2
+    kernel_size: 3
+    #engine: CAFFE
+    dilation: 2
+  }
+}
+layer {
+  name: "relu5_1"
+  type: "ReLU"
+  bottom: "conv5_1"
+  top: "conv5_1"
+}
+layer {
+  name: "conv5_2"
+  type: "Convolution"
+  bottom: "conv5_1"
+  top: "conv5_2"
+  convolution_param {
+    num_output: 512
+    pad: 2
+    kernel_size: 3
+    #engine: CAFFE
+    dilation: 2
+  }
+}
+layer {
+  name: "relu5_2"
+  type: "ReLU"
+  bottom: "conv5_2"
+  top: "conv5_2"
+}
+layer {
+  name: "conv5_3"
+  type: "Convolution"
+  bottom: "conv5_2"
+  top: "conv5_3"
+  convolution_param {
+    num_output: 512
+    pad: 2
+    kernel_size: 3
+    #engine: CAFFE
+    dilation: 2
+  }
+}
+layer {
+  name: "relu5_3"
+  type: "ReLU"
+  bottom: "conv5_3"
+  top: "conv5_3"
+}
+layer {
+  name: "pool5"
+  type: "Pooling"
+  bottom: "conv5_3"
+  top: "pool5"
+  pooling_param {
+    pool: MAX
+    kernel_size: 3
+    stride: 1
+    pad: 1
+  }
+}
+layer {
+  name: "pool5a"
+  type: "Pooling"
+  bottom: "pool5"
+  top: "pool5a"
+  pooling_param {
+    pool: AVE
+    kernel_size: 3
+    stride: 1
+    pad: 1
+  }
+}
+layer {
+  name: "fc6"
+  type: "Convolution"
+  bottom: "pool5a"
+  top: "fc6"
+  convolution_param {
+    num_output: 1024
+    pad: 12
+    kernel_size: 3
+    #engine: CAFFE
+    dilation: 12
+  }
+}
+
+# Flatten (reshape) FC6 output
+layer {
+    name: "reshape"
+    type: "Reshape"
+    bottom: "fc6"
+    top: "fc6_reshape"
+    reshape_param {
+      shape {
+        dim: 0
+        dim: 0
+        dim: 1
+        dim: -1
+      }
+    }
+}
+
+
+# Apply the kernel
+layer {
+  type: "MatMul"
+  name: "apply_fc6_kernels"
+  top: "fc6_kernels_out"
+  bottom: "fc6_reshape"
+  bottom: "fc6_exp_kernel_pool"
+}
+
+### End FC6 kernels
+
+# Go back to 1024 channels from kernel outputs
+
+layer {
+  name: "fc6_w"
+  type: "Convolution"
+  bottom: "data1"
+  top: "fc6_w"
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 2048
+    kernel_size: 1
+    weight_filler {
+      type: "constant"
+      value: 1
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "fc6_w_1"
+  type: "Eltwise"
+  bottom: "fc6_kernels_out"
+  bottom: "fc6_w"
+  top: "fc6_w_1"
+  eltwise_param {
+    operation: PROD
+  }
+}
+layer {
+  name: "img_split"
+  type: "Slice"
+  bottom: "fc6_w_1"
+  top: "fc6_1"
+  top: "fc6_2"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1024
+  }
+}
+
+layer {
+  name: "fc6_eltwise"
+  type: "Eltwise"
+  bottom: "fc6_1"
+  bottom: "fc6_2"
+  top: "combine_fc6_result"
+  eltwise_param {
+    operation: SUM
+  }
+}
+layer {
+  bottom: "combine_fc6_result"
+  top: "combine_fc6_result"
+  name: "relu6"
+  type: "ReLU"
+}
+layer {
+  bottom: "combine_fc6_result"
+  top: "combine_fc6_result"
+  name: "drop6"
+  type: "Dropout"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  bottom: "combine_fc6_result"
+  top: "fc7"
+  name: "fc7"
+  type: "Convolution"
+  convolution_param {
+    num_output: 1024
+    kernel_size: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+}
+
+# Apply the kernel
+layer {
+  type: "MatMul"
+  name: "apply_fc7_kernels"
+  top: "fc7_kernels_out"
+  bottom: "fc7"
+  bottom: "fc7_exp_kernel_pool"
+}
+
+layer {
+  name: "fc7_w"
+  type: "Convolution"
+  bottom: "data1"
+  top: "fc7_w"
+  param {
+    lr_mult: 10
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 0
+    decay_mult: 0
+  }
+  convolution_param {
+    num_output: 6144
+    kernel_size: 1
+    weight_filler {
+      type: "gaussian"
+      std: 0.001
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layer {
+  name: "fc7_w_1"
+  type: "Eltwise"
+  bottom: "fc7_kernels_out"
+  bottom: "fc7_w"
+  top: "fc7_w_1"
+  eltwise_param {
+    operation: PROD
+  }
+}
+layer {
+  name: "split7"
+  type: "Slice"
+  bottom: "fc7_w_1"
+  top: "fc7_1"
+  top: "fc7_2"
+  top: "fc7_3"
+  top: "fc7_4"
+  top: "fc7_5"
+  top: "fc7_6"
+  slice_param {
+    slice_dim: 1
+    slice_point: 1024
+    slice_point: 2048
+    slice_point: 3072
+    slice_point: 4096
+    slice_point: 5120
+  }
+}
+
+layer {
+  name: "fc7_eltwise"
+  type: "Eltwise"
+  bottom: "fc7_1"
+  bottom: "fc7_2"
+  bottom: "fc7_3"
+  bottom: "fc7_4"
+  bottom: "fc7_5"
+  bottom: "fc7_6"
+  top: "combine_fc7_result"
+  eltwise_param {
+    operation: SUM
+  }
+}
+
+
+layer {
+  bottom: "combine_fc7_result"
+  top: "combine_fc7_result"
+  name: "relu7"
+  type: "ReLU"
+}
+layer {
+  bottom: "combine_fc7_result"
+  top: "combine_fc7_result"
+  name: "drop7"
+  type: "Dropout"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+
+layer {
+  bottom: "combine_fc7_result"
+  top: "prob"
+  name: "fc8_voc12"
+  type: "Convolution"
+  convolution_param {
+    num_output: 21
+    kernel_size: 1
+  }
+  param {
+    lr_mult: 1
+    decay_mult: 1
+  }
+  param {
+    lr_mult: 2
+    decay_mult: 0
+  }
+}
+
+
+# Smear from superpixels to pixels
+layer {
+  type: "Smear"
+  name: "outputsmear"
+  top: "prob_image"
+  bottom: "prob"
+  bottom: "spixel_index"
+  smear_param{
+    ignore_feature_value: 255
+    ignore_idx_value: 100000
+  }
+}
+

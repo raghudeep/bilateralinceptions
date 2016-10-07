@@ -13,7 +13,6 @@ input_shape {
   dim: 513
   dim: 513
 }
-# force_backward: true
 
 layer {
   name: "dummy1"
@@ -31,7 +30,10 @@ layer {
   top: "data1"
 }
 
-# Extracting Superpixel features
+#############################
+# Compute superpixel features
+#############################
+
 layer {
   type: "SpixelFeature"
   name: "spixel_feature"
@@ -49,7 +51,10 @@ layer {
     xy_scale: 0.1
   }
 }
-# Transform the features
+
+###################################
+# Superpixel feature transformation
+###################################
 layer {
   bottom: "flatten_xyrgbxy_features"
   top: "flatten_xyrgbxy_features2"
@@ -69,7 +74,10 @@ layer {
   }
 }
 
-# Smear the features to image size
+#########################################
+# Smear superpixel features to image size
+#########################################
+
 layer {
   type: "Smear"
   name: "feature_smear"
@@ -82,6 +90,10 @@ layer {
   }
 }
 
+
+#######################################################
+# Slice Superpixel and Pixel Features into XY and RGBXY
+#######################################################
 
 layer {
   name: "slice_features"
@@ -107,6 +119,11 @@ layer {
   }
 }
 
+
+###############################################################
+# Convert 513x513 features into 65x65 (same as FC6 output size)
+###############################################################
+
 layer {
   name: "_layer_0"
   type: "Interp"
@@ -126,7 +143,10 @@ layer {
   }
 }
 
-# RGBXY kernel from pixels -> spixels
+
+############################################################################
+# RGBXY (transformed features) similarity  kernel from pixels -> superpixels
+############################################################################
 layer {
   type: "Pdist"
   name: "pixel_rgbxy_dist"
@@ -138,7 +158,10 @@ layer {
     scale_value: -1.0
   }
 }
-# XY kernel from pixels -> spixels
+
+############################################################################
+# XY (transformed features) similarity  kernel from pixels -> superpixels
+############################################################################
 layer {
   type: "Pdist"
   name: "pixel_xy_dist"
@@ -151,7 +174,9 @@ layer {
   }
 }
 
-# RGBXY kernel from spixels -> spixels
+#################################################################################
+# RGBXY (transformed features) similarity  kernel from superpixels -> superpixels
+#################################################################################
 layer {
   type: "Pdist"
   name: "spixel_rgbxy_dist"
@@ -163,7 +188,10 @@ layer {
     scale_value: -1.0
   }
 }
-# XY kernel from spixels -> spixels
+
+###############################################################################
+# XY (transformed features) similarity  kernel from superpixels -> superpixels
+###############################################################################
 layer {
   type: "Pdist"
   name: "spixel_xy_dist"
@@ -176,7 +204,9 @@ layer {
   }
 }
 
-# Kernel pool for FC-6 layer
+########################################################################
+# Kernel pool for BI6(2) bilateral inception module to be used after FC6
+########################################################################
 layer {
   name: "concat"
   bottom: "pixel_rgbxy_distkernel"
@@ -188,7 +218,9 @@ layer {
   }
 }
 
-# Kernel pool for FC-7 layer
+########################################################################
+# Kernel pool for BI7(6) bilateral inception module to be used after FC7
+########################################################################
 layer {
   name: "concat"
   bottom: "spixel_rgbxy_distkernel"
@@ -204,9 +236,10 @@ layer {
   }
 }
 
-# Scale, exp, normalize and application of FC6 kernels
+#######################################################
+# Scale, exponentiate and normalize the  BI6(2) kernels
+#######################################################
 
-# Scale the FC6 kernel pool
 layer {
   name: "dummy"
   type: "DummyData"
@@ -274,7 +307,6 @@ layer {
   }
 }
 
-# Exponentiate and normalize the FC6 kernel pool
 layer {
   type: "Softmax"
   name: "exp_fc6_kernels"
@@ -285,9 +317,10 @@ layer {
   }
 }
 
-# Scale, exp, normalize and application of FC7 kernels
+#######################################################
+# Scale, exponentiate and normalize the  KI7(6) kernels
+#######################################################
 
-# Scale the FC7 kernel pool
 layer {
   name: "scale_fc7"
   type: "Convolution"
@@ -340,7 +373,6 @@ layer {
   }
 }
 
-# Exponentiate and normalize the FC7 kernel pool
 layer {
   type: "Softmax"
   name: "exp_fc7_kernels"
@@ -351,6 +383,11 @@ layer {
   }
 }
 
+
+
+###########################################
+# Start of standard DeepLab-LargeFOV model
+###########################################
 layer {
   name: "conv1_1"
   type: "Convolution"
@@ -673,8 +710,12 @@ layer {
     dilation: 12
   }
 }
+# DeepLab model until FC6
 
-# Flatten (reshape) FC6 output
+
+#####################################################
+# Flatten FC6 result and multiply with BI6(2) kernels
+#####################################################
 layer {
     name: "reshape"
     type: "Reshape"
@@ -690,8 +731,6 @@ layer {
     }
 }
 
-
-# Apply the kernel
 layer {
   type: "MatMul"
   name: "apply_fc6_kernels"
@@ -700,9 +739,10 @@ layer {
   bottom: "fc6_exp_kernel_pool"
 }
 
-### End FC6 kernels
 
-# Go back to 1024 channels from kernel outputs
+###################################################
+# Linearly combine the bilateral filtering outputs
+###################################################
 
 layer {
   name: "fc6_w"
@@ -778,6 +818,11 @@ layer {
   }
 }
 
+
+######################################
+# Standard DeepLab-LargeFOV FC7 layer
+######################################
+
 layer {
   bottom: "combine_fc6_result"
   top: "fc7"
@@ -797,7 +842,9 @@ layer {
   }
 }
 
-# Apply the kernel
+#########################################
+# Multiply FC7 result with BI7(6) kernels
+#########################################
 layer {
   type: "MatMul"
   name: "apply_fc7_kernels"
@@ -806,6 +853,9 @@ layer {
   bottom: "fc7_exp_kernel_pool"
 }
 
+#####################################################
+# Linearly combine BI7(6) bilateral filtering results
+#####################################################
 layer {
   name: "fc7_w"
   type: "Convolution"
@@ -894,6 +944,9 @@ layer {
   }
 }
 
+######################################
+# Standard DeepLab-LargeFOV FC8 layer
+######################################
 layer {
   bottom: "combine_fc7_result"
   top: "prob"
@@ -914,7 +967,9 @@ layer {
 }
 
 
-# Smear from superpixels to pixels
+#######################################
+# Smear the superpixel output to pixels
+#######################################
 layer {
   type: "Smear"
   name: "outputsmear"
@@ -927,3 +982,4 @@ layer {
   }
 }
 
+# End of the model

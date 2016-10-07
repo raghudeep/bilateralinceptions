@@ -3,11 +3,9 @@ import os
 import sys
 from PIL import Image
 import scipy.io
+import argparse
 
-
-def evalVOC(result_label_folder, image_list_file=None):
-
-    gt_label_folder = '../data/VOCdevkit/VOC2012/SegmentationClass/'
+def evalVOC(result_label_folder, image_list_file=None, gt_label_folder=None):
 
     max_label = 21
     class_ious = np.zeros((max_label, 1))
@@ -90,10 +88,17 @@ def evalVOC(result_label_folder, image_list_file=None):
     return overall_iou
 
 
+def main():
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--result_dir', type=str, required=True)
+    parser.add_argument('--image_list', type=str, required=True)
+    parser.add_argument('--gt_dir', type=str, required=True)
+
+    var_args = parser.parse_args()
+    evalVOC(var_args.result_dir,
+            var_args.image_list,
+            var_args.gt_dir)
+
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print('Usage: ' + sys.argv[0] + ' <data_type> <result_label_folder>')
-    elif len(sys.argv)==3:
-        evalVOC(sys.argv[1], sys.argv[2])
-    elif len(sys.argv)==4:
-        evalVOC(sys.argv[1], sys.argv[2], image_list_file=sys.argv[3])
+    main()

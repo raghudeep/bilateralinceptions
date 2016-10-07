@@ -5,6 +5,7 @@ import os
 import time
 from PIL import Image as PILImage
 import cv2
+import argparse
 
 from config import *
 from eval_seg import evalVOC
@@ -60,13 +61,26 @@ def do_segmentation(prototxt, caffe_model, image_dir,
             seg_map.putpalette(pallete)
             seg_map.save(out_dir + '/' + imgname + '.png')
 
-    meaniou = evalVOC(out_dir, image_list_file=image_list)
-    return meaniou
+    #meaniou = evalVOC(out_dir, image_list_file=image_list)
+    return 
+
+def main():
+    parser = argparse.ArgumentParser()
+    
+    parser.add_argument('--prototxt', type=str, required=True)
+    parser.add_argument('--caffemodel', type=str, required=True)
+    parser.add_argument('--image_dir', type=str, required=True)
+    parser.add_argument('--image_list', type=str, required=True)
+    parser.add_argument('--superpixel_dir', type=str, required=True)
+    parser.add_argument('--result_dir', type=str, required=True)
+
+    var_args = parser.parse_args()
+    do_segmentation(var_args.prototxt,
+                    var_args.caffemodel,
+                    var_args.image_dir,
+                    var_args.image_list,
+                    var_args.superpixel_dir,
+                    var_args.result_dir)
 
 if __name__ == '__main__':
-    do_segmentation('../models/deeplab_coco_largefov_bi6_2_bi7_6_deploy.prototxt',
-                    '../models/deeplab_coco_largefov_bi6_2_bi7_6.caffemodel',
-                    '../data/VOCdevkit/VOC2012/JPEGImages/',
-                    '../data/reducedval.txt',
-                    '../results/spix_indices/',
-                    '../results/segmentations/')
+    main()

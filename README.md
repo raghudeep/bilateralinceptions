@@ -96,25 +96,28 @@ corresponding folders of Caffe. Caffe will then add the new files into the proje
 
 Alternatively, you can manually copy all but `caffe.proto` source files in `bilateralinceptions` folder to the corresponding locations in your Caffe repository. Then, for merging the `caffe.proto` file of `bilateralinceptions` to your version of the `caffe.proto`:
 
-1. the copy the lines 382-383 and 854-922 in `caffe.proto` to the corresponding `caffe.proto` file in the destination Caffe repository.
-1. Change the parameter IDs for `PermutohedralParameter` and `PixelFeatureParameter` based on the next available `LayerParameter` ID in your Caffe.
+1. the copy the lines 407-411 and 1210-1275 in `caffe.proto` to the corresponding `caffe.proto` file in the destination Caffe repository.
+2. Change the parameter IDs for `InterpParameter`, `PixelFeatureParameter`, `PdistParameter`, `SmearParameter` and `SpixelFeatureParameter` based on the next available `LayerParameter` ID in your Caffe.
 
 ## Example Usage
 To use the provided code and replicate the results on the VOC2012 dataset, 
-* Run the get_voc.sh (It downloads the VOC2012 dataset in `data` folder.)
-* Next, compute the SLIC superpixels using the following command 
-* Using the Python scripts given in the folder `$bilateralinceptions/scripts`. Those examples rely on the Python extensions of Caffe.
 
-All the commands are given below for convinience
+#### Preparing the data
+Run the get_voc.sh (It downloads the VOC2012 dataset in `data` folder.)
 ```
-cd $bilateralinceptions
-mkdir build
-cd build
-cmake ../
-make
 cd $bilateralinceptions/scripts
 sh get_voc.sh
+```
+
+#### Computing superpixels
+ Next, compute the SLIC superpixels using the following command 
+```
 ./../build/tools/compute_superpixels ../data/VOCdevkit/VOC2012/JPEGImages/ ../data/reducedval.txt ../results/spix_indices/ 
+```
+
+#### Applying the provided models
+Using the Python scripts given in the folder `$bilateralinceptions/scripts` which rely on the Python extensions of Caffe.
+```
 python do_segmentation.py 
 ```
 

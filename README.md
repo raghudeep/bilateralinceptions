@@ -9,10 +9,10 @@ This is the code accompanying the following **ECCV 2016** publication:
 --------
 
 This is developed and maintained by
-[Raghudeep Gadde](https://ps.is.tuebingen.mpg.de/person/rgadde),
 [Varun Jampani](https://ps.is.tuebingen.mpg.de/person/vjampani),
-[Martin Kiefel](https://ps.is.tuebingen.mpg.de/person/mkiefel),
-[Daniel Kappler](https://am.is.tuebingen.mpg.de/person/dkappler) and
+[Raghudeep Gadde](https://ps.is.tuebingen.mpg.de/person/rgadde),
+[Daniel Kappler](https://am.is.tuebingen.mpg.de/person/dkappler),
+[Martin Kiefel](https://ps.is.tuebingen.mpg.de/person/mkiefel) and
 [Peter V. Gehler](https://ps.is.tuebingen.mpg.de/person/pgehler).
 
 Please visit the project website [http://segmentation.is.tue.mpg.de](http://segmentation.is.tue.mpg.de) for more details about the paper and overall methodology.
@@ -103,60 +103,80 @@ Alternatively, you can manually copy all but `caffe.proto` source files in `bila
 To use the provided code and replicate the results on the VOC2012 dataset, 
 
 #### Preparing the data
-Run the get_voc.sh (It downloads the VOC2012 dataset in `data` folder.)
+Run `get_voc.sh` script to download Pascal VOC2012 dataset in `data` folder)
 ```
 cd $bilateralinceptions/scripts
 sh get_voc.sh
 ```
 
 #### Computing superpixels
- Next, compute the SLIC superpixels using the following command 
+
+Next, compute the SLIC superpixels using the following command 
 ```
 cd $bilaretalinceptions
-./build/tools/compute_superpixels path_to_image_directory path_to_image_list path_to_save_superpixel_indices_directory 
+./build/tools/compute_superpixels IMAGE_DIR IMAGE_LIST SUPERPIXEL_DIR 
 ```
-example:
+
+To extract superpixels on PascalVOC `reduced validation` set images:
 ```
 ./build/tools/compute_superpixels data/VOCdevkit/VOC2012/JPEGImages/ data/reducedval.txt results/spix_inces/ 
 ```
 
-#### Applying the provided models
-Using the Python scripts given in the folder `$bilateralinceptions/scripts` which rely on the Python extensions of Caffe.
+#### Get the trained DeepLab-bilateral-inception model
+
+Execute the below command to download the BI6(2)-BI7(6) bilateral inception model for DeepLab-LargeFOV, trained on Pascal VOC12 images.
+```
+sh scripts/get_deeplab_model.sh
+```
+
+This will download the caffemodel in the `models` folder.
+
+#### Doing the segmentation
+
+You can run the segmentation using the `do_segmentation.py` python script in the `$bilateralinceptions/scripts` folder which rely on the Python extensions of Caffe.
+
+Syntax for running the segmentation script:
 ```
 cd $bilaretalinceptions
-python scripts/do_segmentation.py --protoxt path_to_prototxt --caffemodel path_to_caffemodel --image_dir path_to_image_directory --image_list path_to_image_list --superpixel_dir path_to_superpixel_indices_directory --result_dir path_to_save_results_directory
+python scripts/do_segmentation.py --protoxt PROTOTXT --caffemodel CAFFEMODEL --image_dir IMAGE_DIR --image_list IMAGE_LIST --superpixel_dir SUPERPIXEL_DIR --result_dir OUTPUT_RESULT_DIR
 ```
-example:
+
+To run the segmentation on Pascal VOC12 reduced validation set:
 ```
 python scripts/do_segmentation.py --prototxt models/deeplab_coco_largefov_bi6_2_bi7_6_deploy.prototxt --caffemodel models/deeplab_coco_largefov_bi6_2_bi7_6.caffemodel --image_dir data/VOCdevkit/VOC2012/JPEGImages/ --image_list data/reducedval.txt --superpixel_dir results/spix_indices/ --result_dir results/segmentations/
 ```
 
 #### Evaluating the results
-We provide a python script to compute the IoU accuracy of the obtained segmentations.
+We provide a python script to compute the IoU score of the obtained segmentations.
 ```
 cd $bilaretalinceptions
-python scripts/eval_segmentation.py --result_dir path_to_result_directory --image_list path_to_image_list --gt_dir path_to_ground_truth_directory
+python scripts/eval_segmentation.py --result_dir OUTPUT_RESULT_DIR --image_list IMAGE_LIST --gt_dir GROUND_TRUTH_DIR
 ```
-example:
+
+To evaluate the segmentation results on Pascal VOC12 reduced validation set:
 ```
 python scripts/eval_segmentation.py --result_dir results/segmentations/ --image_list data/reducedval.txt --gt_dir data/VOCdevkit/VOC2012/SegmentationClass/
 ```
 
-You would find on [http://segmentation.is.tue.mpg.de](http://segmentation.is.tue.mpg.de) a detailed description of the layer usage and an example.
+You would find on [http://segmentation.is.tue.mpg.de](http://segmentation.is.tue.mpg.de) a description of new Caffe layers that we have added for this project.
 
 ## Citations
 
-Please consider citing the following papers if you make use of this work and/or the corresponding code:
+Please consider citing the below paper if you make use of this work and/or the corresponding code:
 
 ```
-@inproceedings{gadde2015superpixel,
-	title = {Superpixel Convolutional Networks using Bilateral Inceptions},
-	author = {Gadde, Raghudeep and Jampani, Varun and Kiefel, Martin and Gehler, Peter V},
-	booktitle = {Computer Vision - ECCV},
-	year = {2016}
+@inproceedings{gadde16bilateralinception,
+  title = {Superpixel Convolutional Networks using Bilateral Inceptions},
+  author = {Gadde, Raghudeep and Jampani, Varun and Kiefel, Martin and Kappler, Daniel and Gehler, Peter},
+  booktitle = {Computer Vision -- ECCV 2016},
+  series = {Lecture Notes in Computer Science},
+  publisher = {Springer International Publishing},
+  month = oct,
+  year = {2016}
 }
 ```
-and the GPU implementation of SLIC superpixels. Please do not forget citing the original SLIC superpixel paper. 
+
+If you use the gSLICr superpixels, please do not forget citing the original SLIC and gSLICr superpixel works:
 ```
 @article{gSLICr_2015,
     author = {Carl Yuheng Ren and Victor Adrian Prisacariu and Ian D Reid},

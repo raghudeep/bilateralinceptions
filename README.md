@@ -106,6 +106,7 @@ To use the provided code and replicate the results on the VOC2012 dataset,
 * Using the Python scripts given in the folder `$bilateralinceptions/scripts`. Those examples rely on the Python extensions of Caffe.
 
 All the commands are given below for convinience
+```
 cd $bilateralinceptions
 mkdir build
 cd build
@@ -115,6 +116,7 @@ cd $bilateralinceptions/scripts
 sh get_voc.sh
 ./../build/tools/compute_superpixels ../data/VOCdevkit/VOC2012/JPEGImages/ ../data/reducedval.txt ../results/spix_indices/ 
 python do_segmentation.py 
+```
 
 You would find on [http://segmentation.is.tue.mpg.de](http://segmentation.is.tue.mpg.de) a detailed description of the layer usage and an example.
 

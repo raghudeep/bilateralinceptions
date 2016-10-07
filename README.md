@@ -112,13 +112,34 @@ sh get_voc.sh
 #### Computing superpixels
  Next, compute the SLIC superpixels using the following command 
 ```
-./../build/tools/compute_superpixels ../data/VOCdevkit/VOC2012/JPEGImages/ ../data/reducedval.txt ../results/spix_indices/ 
+cd $bilaretalinceptions
+./build/tools/compute_superpixels path_to_image_directory path_to_image_list path_to_save_superpixel_indices_directory 
+```
+example:
+```
+./build/tools/compute_superpixels data/VOCdevkit/VOC2012/JPEGImages/ data/reducedval.txt results/spix_inces/ 
 ```
 
 #### Applying the provided models
 Using the Python scripts given in the folder `$bilateralinceptions/scripts` which rely on the Python extensions of Caffe.
 ```
-python do_segmentation.py 
+cd $bilaretalinceptions
+python scripts/do_segmentation.py --protoxt path_to_prototxt --caffemodel path_to_caffemodel --image_dir path_to_image_directory --image_list path_to_image_list --superpixel_dir path_to_superpixel_indices_directory --result_dir path_to_save_results_directory
+```
+example:
+```
+python scripts/do_segmentation.py --prototxt models/deeplab_coco_largefov_bi6_2_bi7_6_deploy.prototxt --caffemodel models/deeplab_coco_largefov_bi6_2_bi7_6.caffemodel --image_dir data/VOCdevkit/VOC2012/JPEGImages/ --image_list data/reducedval.txt --superpixel_dir results/spix_indices/ --result_dir results/segmentations/
+```
+
+#### Evaluating the results
+We provide a python script to compute the IoU accuracy of the obtained segmentations.
+```
+cd $bilaretalinceptions
+python scripts/eval_segmentation.py --result_dir path_to_result_directory --image_list path_to_image_list --gt_dir path_to_ground_truth_directory
+```
+example:
+```
+python scripts/eval_segmentation.py --result_dir results/segmentations/ --image_list data/reducedval.txt --gt_dir data/VOCdevkit/VOC2012/SegmentationClass/
 ```
 
 You would find on [http://segmentation.is.tue.mpg.de](http://segmentation.is.tue.mpg.de) a detailed description of the layer usage and an example.

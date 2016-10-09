@@ -57,7 +57,7 @@ This will configure the project, you may then run:
 
 **Notes**
 
-* Our code has been tested with revision `a1c81aca641e5b16f3e2007be07dfdedc072606e` of Caffe, and this
+* Our code has been tested with revision `a2179bdec004bd1cc2edfc8cf1fbc5b07a117de6` of Caffe, and this
 is the version that is cloned. You may change the version by passing the option `CAFFE_VERSION` on the command line of
 `cmake`:
 

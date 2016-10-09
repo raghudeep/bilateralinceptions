@@ -13,12 +13,17 @@ if("${CAFFE_SRC}" STREQUAL "")
   # CAFFE_SRC is set depending on the PREFIX
   set(CAFFE_CLONE TRUE)
 
+  # Default caffe version
+  if("${CAFFE_VERSION}" STREQUAL "")
+    set(CAFFE_VERSION a2179bdec004bd1cc2edfc8cf1fbc5b07a117de6)
+  endif()
+
   # Default repository
   if("${CAFFE_REPOSITORY}" STREQUAL "")
     set(CAFFE_REPOSITORY "https://github.com/BVLC/caffe.git")
   endif()
 
-  message(STATUS "Configuring the project with a fresh clone of Caffe (${CAFFE_REPOSITORY})")
+  message(STATUS "Configuring the project with a fresh clone of Caffe (${CAFFE_REPOSITORY} @ ${CAFFE_VERSION})")
 else()
   set(CAFFE_CLONE FALSE)
   message(STATUS "Using an existing Caffe copy from ${CAFFE_SRC}")

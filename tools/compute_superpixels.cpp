@@ -95,6 +95,10 @@ int main(int argc, char* argv[])
 		sprintf(out_name, "%s/%s.pgm", argv[3], line.c_str());
 		gSLICr_engine->Write_Seg_Res_To_PGM(out_name);
 		save_count++;
+		
+		delete in_img;
+		delete out_img;
+		delete gSLICr_engine;
 	}
 
 	return 0;

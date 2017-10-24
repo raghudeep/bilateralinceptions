@@ -8,7 +8,7 @@ import cv2
 import argparse
 
 from config import *
-from eval_seg import evalVOC
+# from eval_seg import evalVOC
 
 def do_segmentation(prototxt, caffe_model, image_dir, 
                     image_list, spixel_dir, out_dir):

@@ -119,7 +119,7 @@ cd $bilaretalinceptions
 
 To extract superpixels on PascalVOC `reduced validation` set images:
 ```
-./build/tools/compute_superpixels data/VOCdevkit/VOC2012/JPEGImages/ data/reducedval.txt results/spix_inces/ 
+./build/tools/compute_superpixels data/VOCdevkit/VOC2012/JPEGImages/ data/reducedval.txt results/spix_indices/ 
 ```
 
 #### Get the trained DeepLab-bilateral-inception model
